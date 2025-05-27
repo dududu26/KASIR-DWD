@@ -1,0 +1,254 @@
+/* kasir.css */
+.rainbow-wave {
+  font-size: 3vw; /* pakai vw supaya ukuran font menyesuaikan lebar layar */
+  font-weight: 900;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(
+    45deg,
+    red,
+    orange,
+    yellow,
+    green,
+    blue,
+    indigo,
+    violet,
+    red
+  );
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  animation: wave-color 5s linear infinite;
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.blink-all {
+  animation-name: wave-color, blink;
+  animation-duration: 5s, 1.5s;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+}
+
+@keyframes wave-color {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 400% 50%;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f6f8;
+  color: #333;
+  margin: 0;
+  padding: 1rem;
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+h1, h2 {
+  color: #2c3e50;
+  font-size: 1.25rem; /* 20px */
+  margin-top: 1rem;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem; /* 14px */
+  border-radius: 0.375rem; /* 6px */
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 0.5rem;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+select,
+input[type="number"] {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid #ccc;
+  border-radius: 0.3125rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.3125rem;
+}
+
+label {
+  font-weight: 500;
+  margin-top: 0.625rem;
+  display: block;
+}
+
+#info-produk {
+  font-size: 0.875rem;
+  color: #555;
+  margin-top: 0.3125rem;
+}
+
+#form-produk {
+  margin-top: 0.625rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.8125rem; /* 13px */
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  body {
+    padding: 2rem 4rem;
+    font-size: 1.125rem; /* lebih besar sedikit */
+  }
+
+  .rainbow-wave {
+    font-size: 2rem; /* Ukuran lebih stabil dan jelas di desktop */
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  button {
+    font-size: 1rem;
+    max-width: 400px;
+  }
+
+  select, input[type="number"] {
+    font-size: 1rem;
+  }
+
+  .form-section {
+    padding: 2rem;
+    margin-top: 2rem;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  table {
+    font-size: 1rem;
+  }
+
+  th, td {
+    padding: 1rem;
+  }
+  @media print {
+  #print-struk {
+    display: block !important;
+  }
+}
+}
+
+th, td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #ecf0f1;
+  color: #34495e;
+  font-size: 0.8125rem;
+}
+
+tr:hover {
+  background-color: #f9f9f9;
+}
+
+.form-section {
+  background: white;
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 0.625rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+
+.form-section h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .rainbow-wave {
+    font-size: 6vw;
+  }
+
+  h1, h2 {
+    font-size: 1.125rem;
+  }
+
+  th, td {
+    font-size: 0.75rem;
+    padding: 0.375rem;
+  }
+
+  button {
+    font-size: 0.8125rem;
+    padding: 0.5rem;
+  }
+
+  select, input[type="number"] {
+    font-size: 0.8125rem;
+  }
+
+  .form-section {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rainbow-wave {
+    font-size: 8vw;
+  }
+
+  h1, h2 {
+    font-size: 1rem;
+  }
+
+  th, td {
+    font-size: 0.7rem;
+    padding: 0.25rem;
+  }
+
+  button {
+    font-size: 0.75rem;
+    padding: 0.4rem;
+  }
+
+  select, input[type="number"] {
+    font-size: 0.75rem;
+  }
+
+  .form-section {
+    padding: 0.5rem;
+  }
+}

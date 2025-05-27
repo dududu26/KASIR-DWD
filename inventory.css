@@ -1,0 +1,155 @@
+.moving-wave {
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  white-space: nowrap;
+  background: linear-gradient(
+    270deg,
+    #ff6b6b, #f7b733, #4ecdc4, #556270, #c7ecee, #e77f67, #f8a5c2, #6a89cc, #82ccdd, #b8e994
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbowWave 8s ease-in-out infinite, waveMotion 3s ease-in-out infinite;
+  display: inline-block;
+  transform-origin: center bottom;
+  letter-spacing: 0.05em;
+}
+
+@keyframes rainbowWave {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes waveMotion {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+/* inventory.css */
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f6f8;
+  color: #333;
+  margin: 0;
+  padding: 10px;
+}
+
+h1, h2 {
+  color: #2c3e50;
+  font-size: 20px;
+  margin: 10px 0;
+}
+
+button {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #27ae60;
+}
+
+input[type="text"],
+input[type="number"] {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 5px;
+}
+
+label {
+  font-weight: 500;
+  display: block;
+  margin-top: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-size: 13px;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #ecf0f1;
+  color: #34495e;
+  font-size: 13px;
+}
+
+tr:hover {
+  background-color: #f9f9f9;
+}
+
+.container {
+  background: white;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+#scanner-container,
+#scanner-container-cari {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  h1, h2 {
+    font-size: 18px;
+  }
+
+  th, td {
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  button {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    font-size: 13px;
+  }
+
+  .container {
+    padding: 10px;
+  }
+}

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kasir</title>
+  <link rel="stylesheet" href="kasir.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body.locked {
+      display: none;
+    }
+    .dark-mode {
+      background-color: #1f2937;
+      color: white;
+    }
+    .dark-mode input,
+    .dark-mode select,
+    .dark-mode button {
+      background-color: #374151;
+      color: white;
+    }
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-struk, #print-struk * {
+    visibility: visible;
+  }
+  #print-struk {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    margin: auto;
+    width: 100%;       /* biar lebar isi maksimal sesuai kertas */
+    max-width: 80mm;   /* contoh buat printer struk 80mm, bisa disesuaikan */
+    padding: 1 ;      /* jarak isi ke pinggir kertas */
+    box-sizing: border-box;
+    border: 0.5px solid black;
+    text-align: left;  /* daftar item rata kiri */
+    overflow-wrap: break-word;
+  }
+    }
+  </style>
+</head>
+<body class="locked p-4 bg-white text-black transition-all duration-300">
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Aplikasi Kasir</h1>
+    <button id="dark-toggle" class="bg-gray-800 text-white px-3 py-1 rounded">Dark Mode</button>
+  </div>
+
+  <div class="mb-4 flex flex-wrap gap-2">
+    <button class="bg-blue-500 text-white px-3 py-1 rounded" onclick="window.location.href='inventory.html'">Ke Inventory</button>
+    <button class="bg-green-500 text-white px-3 py-1 rounded" id="btn-scan-barcode">Scan Barcode</button>
+    <button class="bg-red-500 text-white px-3 py-1 rounded hidden" id="btn-stop-scan">Stop Scan</button>
+  </div>
+
+  <div id="reader" class="border p-2 rounded hidden"></div>
+
+  <!-- Kolom Pencarian Produk -->
+  <div class="mb-2">
+    <input type="text" id="cari-produk" placeholder="Cari produk..." class="border px-2 py-1 w-full max-w-md rounded" />
+  </div>
+
+  <div class="mb-4">
+    <label for="produk-select">Pilih Produk:</label>
+    <select id="produk-select" class="border px-2 py-1 w-full max-w-md rounded">
+      <option value="">-- Pilih produk --</option>
+    </select>
+    <span id="info-produk" class="block mt-1"></span>
+    <div id="form-produk" class="mt-2 hidden">
+      <label>Qty:
+        <input type="number" id="qty" min="1" value="1" class="border rounded px-2 py-1 w-20" />
+      </label>
+      <button id="btn-tambah" class="ml-2 bg-blue-500 text-white px-3 py-1 rounded">Tambah</button>
+    </div>
+  </div>
+
+  <h2 class="text-lg font-semibold mt-4">Keranjang</h2>
+  <table class="w-full border mt-2 text-sm">
+    <thead class="bg-gray-200 dark:bg-gray-700">
+      <tr>
+        <th class="border px-2 py-1">Nama</th>
+        <th class="border px-2 py-1">Harga</th>
+        <th class="border px-2 py-1">Qty</th>
+        <th class="border px-2 py-1">Subtotal</th>
+        <th class="border px-2 py-1">Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="keranjang"></tbody>
+  </table>
+
+  <div class="mt-4">
+    <h2 class="text-xl font-bold">Total: <span id="total-harga">Rp 0</span></h2>
+    <label class="block mt-2">Uang Dibayar:
+      <input type="number" id="uang-dibayar" class="border rounded px-2 py-1 w-40" />
+    </label>
+    <p class="mt-1">Kembalian: <span id="kembalian">Rp 0</span></p>
+ 
+    <button id="btn-transaksi" disabled class="mt-2 bg-green-600 text-white px-4 py-2 rounded">Proses Transaksi</button>
+    <button id="btn-batal" class="ml-2 bg-red-500 text-white px-4 py-2 rounded">Batalkan</button>
+    <button onclick="window.print()" class="ml-2 bg-indigo-500 text-white px-4 py-2 rounded">Cetak Struk</button>
+  </div>
+
+<div id="print-struk" class="hidden print:block p-4 text-sm">
+  <!-- Isi struk akan disuntikkan di sini -->
+</div>
+    <h2>Struk Pembelian</h2>
+    <div id="struk-isi"></div>
+  </div>
+
+  <h2 class="mt-6 text-lg font-semibold">Riwayat Transaksi</h2>
+  <select id="riwayat-transaksi" class="border px-2 py-1 w-full max-w-md rounded mt-2">
+    <option value="">-- Pilih transaksi --</option>
+  </select>
+  <div id="detail-transaksi" class="border p-2 mt-2 rounded bg-gray-50"></div>
+
+  <script>
+    // Dark mode toggle
+    document.getElementById('dark-toggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+    });
+
+    // Prompt password
+    const kodeBenar = '261296';
+    const inputKode = prompt(":");
+    if (inputKode === kodeBenar) {
+      document.body.classList.remove('locked');
+    } else {
+      alert("Kode salah! Akses ditolak.");
+      document.body.innerHTML = '<h1>Akses Ditolak</h1>';
+      throw new Error("Akses diblokir.");
+    }
+
+    const supa = supabase.createClient(
+      'https://uupzrnmmsqnogbqivstj.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1cHpybm1tc3Fub2dicWl2c3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNjAyNzksImV4cCI6MjA2MzYzNjI3OX0.1bTJ9FGNZ8ou20gngHfhE_r7sI23AfYh0jtWyQFqSiI'
+    );
+
+    let allProducts = [];
+    let cart = [];
+    let allTransactions = [];
+
+    const produkSelect = document.getElementById('produk-select');
+    const cariProduk = document.getElementById('cari-produk');
+
+    async function loadProdukDropdown() {
+      const { data: products } = await supa.from('products').select('*').order('name');
+      allProducts = products || [];
+      tampilkanProdukDropdown();
+    }
+
+    function tampilkanProdukDropdown() {
+      const keyword = cariProduk.value.toLowerCase();
+      produkSelect.innerHTML = '<option value="">-- Pilih produk --</option>';
+      allProducts
+        .filter(p => p.name.toLowerCase().includes(keyword))
+        .forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.id;
+          option.textContent = `${p.name} - Rp ${formatRupiah(p.price)} (Stok: ${p.stock})`;
+          produkSelect.appendChild(option);
+        });
+    }
+
+    cariProduk.addEventListener('input', tampilkanProdukDropdown);
+
+    function formatRupiah(number) {
+      return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    function tampilkanKeranjang() {
+      const tbody = document.getElementById('keranjang');
+      tbody.innerHTML = '';
+      cart.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${item.name}</td>
+          <td class="border px-2 py-1">Rp ${formatRupiah(item.price)}</td>
+          <td class="border px-2 py-1">
+            <button onclick="ubahQty(${index}, -1)">-</button>
+            ${item.qty}
+            <button onclick="ubahQty(${index}, 1)">+</button>
+          </td>
+          <td class="border px-2 py-1">Rp ${formatRupiah(item.price * item.qty)}</td>
+          <td class="border px-2 py-1"><button onclick="hapusItem(${index})" class="text-red-600">Hapus</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const strukDiv = document.getElementById('struk-isi');
+      strukDiv.innerHTML = `<ul>${cart.map(item => `<li>${item.name} x${item.qty} = Rp ${formatRupiah(item.qty * item.price)}</li>`).join('')}</ul>`;
+    }
+
+    window.ubahQty = function (index, delta) {
+      const item = cart[index];
+      const produk = allProducts.find(p => p.id === item.id);
+      const newQty = item.qty + delta;
+      if (newQty >= 1 && newQty <= produk.stock) {
+        item.qty = newQty;
+        tampilkanKeranjang();
+        hitungTotal();
+      }
+    };
+
+    window.hapusItem = function (index) {
+      cart.splice(index, 1);
+      tampilkanKeranjang();
+      hitungTotal();
+    };
+
+    function hitungTotal() {
+      const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
+      document.getElementById('total-harga').textContent = `Rp ${formatRupiah(total)}`;
+      hitungKembalian();
+    }
+
+    function hitungKembalian() {
+      const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
+      const dibayar = parseInt(document.getElementById('uang-dibayar').value) || 0;
+      const kembali = dibayar - total;
+      document.getElementById('kembalian').textContent = kembali >= 0 ? `Rp ${formatRupiah(kembali)}` : 'Rp 0';
+      document.getElementById('btn-transaksi').disabled = !(dibayar >= total && total > 0);
+    }
+
+    document.getElementById('uang-dibayar').addEventListener('input', hitungKembalian);
+
+    produkSelect.addEventListener('change', () => {
+      const selected = allProducts.find(p => p.id == produkSelect.value);
+      if (selected) {
+        document.getElementById('info-produk').textContent = `Harga: Rp ${formatRupiah(selected.price)}, Stok: ${selected.stock}`;
+        document.getElementById('qty').max = selected.stock;
+        document.getElementById('form-produk').classList.remove('hidden');
+      } else {
+        document.getElementById('form-produk').classList.add('hidden');
+      }
+    });
+
+    document.getElementById('btn-tambah').addEventListener('click', () => {
+      const selected = allProducts.find(p => p.id == produkSelect.value);
+      const qty = parseInt(document.getElementById('qty').value);
+      if (!selected || qty < 1 || qty > selected.stock) return alert('Qty tidak valid!');
+      const existing = cart.find(i => i.id === selected.id);
+      if (existing) {
+        if (existing.qty + qty > selected.stock) return alert('Stok tidak cukup!');
+        existing.qty += qty;
+      } else {
+        cart.push({ ...selected, qty });
+      }
+      tampilkanKeranjang();
+      hitungTotal();
+    });
+
+    document.getElementById('btn-batal').addEventListener('click', () => {
+      if (confirm("Batalkan transaksi?")) {
+        cart = [];
+        tampilkanKeranjang();
+        hitungTotal();
+        document.getElementById('uang-dibayar').value = '';
+      }
+    });
+document.getElementById('btn-transaksi').addEventListener('click', async () => {
+  const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
+  const transaksi = {
+    items: cart.map(c => ({ product_id: c.id, product_name: c.name, qty: c.qty, price: c.price, total: c.qty * c.price })),
+    total,
+    created_at: new Date().toISOString()
+  };
+
+  await supa.from('transactions').insert([transaksi]);
+
+  for (const item of cart) {
+    const stokBaru = allProducts.find(p => p.id === item.id).stock - item.qty;
+    await supa.from('products').update({ stock: stokBaru }).eq('id', item.id);
+  }
+
+  // === Bikin isi struk dulu ===
+  const dibayar = parseInt(document.getElementById('uang-dibayar').value) || 0;
+const kembalian = dibayar - total;
+const tanggal = new Date();
+const tanggalStr = tanggal.toLocaleDateString('id-ID');
+const jamStr = tanggal.toLocaleTimeString('id-ID');
+
+let isiStrukHTML = `
+  <h2>BUKTI BELANJA</h2>
+  <div style="border: 5px solid black; padding: 10px; width: 250px; font-family: monospace;">
+<div style="text-align: center; font-size: 10px;">
+    KEDAI DWD<br>
+    Nomor Whatsapp (081932704951)<br>
+    LOKASI-SEPIT KERUAK
+  </div>
+  <div style="text align:center; font-size: 10px;">
+    Tanggal: ${tanggalStr} ${jamStr}</div>
+  <hr>
+`;
+
+transaksi.items.forEach(item => {
+  isiStrukHTML += `
+  <div style="font-size: 15px; text-align: left;">
+    <div>${item.qty} x ${item.product_name} hrg/pcs Rp ${item.price.toLocaleString('id-ID')} = Rp ${item.total.toLocaleString('id-ID')}</div>
+  `;
+});
+
+isiStrukHTML += `
+  <hr>
+  <div><strong>Total: Rp ${total.toLocaleString('id-ID')}</strong></div>
+  <div>Bayar: Rp ${dibayar.toLocaleString('id-ID')}</div>
+  <div>Kembalian: Rp ${kembalian.toLocaleString('id-ID')}</div>
+  <div style="text-align: center; font-size: 13px;">
+  -----------------------------------------------------------------<br>
+    Terima kasih atas kunjungan Anda!<br>DI KEDAI DWD <br>
+    Simpan struk ini sebagai bukti pembayaran.
+  </div>
+`;
+
+  // Masukkan ke div #print-struk
+  const printStruk = document.getElementById('print-struk');
+  printStruk.innerHTML = isiStrukHTML;
+
+  // Tampilkan dan cetak
+  setTimeout(() => {
+    printStruk.classList.remove('hidden');
+    window.print();
+    printStruk.classList.add('hidden');
+  }, 300);
+
+  alert("Transaksi berhasil!");
+  cart = [];
+  tampilkanKeranjang();
+  hitungTotal();
+  document.getElementById('uang-dibayar').value = '';
+  await loadProdukDropdown();
+});
+    // Barcode Scanner
+let scanner;
+document.getElementById("btn-scan-barcode").addEventListener("click", async () => {
+  document.getElementById("reader").classList.remove("hidden");
+  document.getElementById("btn-stop-scan").classList.remove("hidden");
+  document.getElementById("btn-scan-barcode").classList.add("hidden");
+
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: 250,
+    },
+    async (barcode) => {
+      const produk = allProducts.find(p => p.barcode === barcode);
+      if (produk) {
+        const existing = cart.find(i => i.id === produk.id);
+        if (existing) {
+          if (existing.qty + 1 > produk.stock) return alert('Stok tidak cukup!');
+          existing.qty += 1;
+        } else {
+          cart.push({ ...produk, qty: 1 });
+        }
+        tampilkanKeranjang();
+        hitungTotal();
+      } else {
+        alert("Produk dengan barcode ini tidak ditemukan.");
+      }
+      await scanner.stop();
+      document.getElementById("reader").classList.add("hidden");
+      document.getElementById("btn-stop-scan").classList.add("hidden");
+      document.getElementById("btn-scan-barcode").classList.remove("hidden");
+    },
+    (error) => {
+      console.warn("Scanning error:", error);
+    }
+  );
+});
+
+document.getElementById("btn-stop-scan").addEventListener("click", async () => {
+  if (scanner) {
+    await scanner.stop();
+    document.getElementById("reader").classList.add("hidden");
+    document.getElementById("btn-stop-scan").classList.add("hidden");
+    document.getElementById("btn-scan-barcode").classList.remove("hidden");
+  }
+});
+
+    // Scanner barcode dan transaksi riwayat dihilangkan di sini untuk singkat — bisa ditambahkan kembali.
+
+    loadProdukDropdown();
+  async function loadRiwayatTransaksi() {
+    const { data: transactions } = await supa.from('transactions').select('*').order('created_at', { ascending: false });
+    const riwayatSelect = document.getElementById('riwayat-transaksi');
+    riwayatSelect.innerHTML = '<option value="">-- Pilih transaksi --</option>';
+
+    allTransactions = transactions || [];
+
+    allTransactions.forEach((trx, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      const tanggal = new Date(trx.created_at).toLocaleString('id-ID');
+      option.textContent = `Transaksi ${index + 1} - ${tanggal} - Total Rp ${formatRupiah(trx.total)}`;
+      riwayatSelect.appendChild(option);
+    });
+  }
+
+  document.getElementById('riwayat-transaksi').addEventListener('change', function () {
+    const index = this.value;
+    const trx = allTransactions[index];
+    const detailDiv = document.getElementById('detail-transaksi');
+    
+    if (trx) {
+      const listItems = trx.items.map(i =>
+        `<li>${i.product_name} x${i.qty} = Rp ${formatRupiah(i.total)}</li>`
+      ).join('');
+      detailDiv.innerHTML = `
+        <p><strong>Tanggal:</strong> ${new Date(trx.created_at).toLocaleString('id-ID')}</p>
+        <p><strong>Total:</strong> Rp ${formatRupiah(trx.total)}</p>
+        <ul class="mt-2">${listItems}</ul>
+      `;
+    } else {
+      detailDiv.innerHTML = '';
+    }
+  });
+
+  // panggil setelah semua siap
+  loadProdukDropdown();
+  loadRiwayatTransaksi(); // <--- Tambahkan ini agar riwayat muncul
+  allTransactions.forEach((trx, index) => {
+  const option = document.createElement('option');
+  option.value = index;
+  option.textContent = `Transaksi #${index + 1} - Total: Rp ${formatRupiah(trx.total)}`;
+  riwayatSelect.appendChild(option);
+});
+
+riwayatSelect.addEventListener('change', () => {
+  const index = riwayatSelect.value;
+  const detailDiv = document.getElementById('detail-transaksi');
+  if (index === "") {
+    detailDiv.innerHTML = '';
+    return;
+  }
+  const trx = allTransactions[index];
+  const isi = trx.items.map(item =>
+    `<li>${item.product_name} x${item.qty} = Rp ${formatRupiah(item.total)}</li>`
+  ).join('');
+  detailDiv.innerHTML = `
+    <p><strong>Tanggal:</strong> ${new Date(trx.created_at).toLocaleString()}</p>
+    <p><strong>Total:</strong> Rp ${formatRupiah(trx.total)}</p>
+    <ul>${isi}</ul>
+  `;
+});
+  async function loadTransaksi() {
+    const { data, error } = await supa
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error("Gagal mengambil transaksi:", error);
+      return;
+    }
+
+    allTransactions = data;
+    const riwayatSelect = document.getElementById('riwayat-transaksi');
+    riwayatSelect.innerHTML = '<option value="">-- Pilih transaksi --</option>';
+
+    data.forEach((transaksi, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = `${new Date(transaksi.created_at).toLocaleString()} - Rp ${formatRupiah(transaksi.total)}`;
+      riwayatSelect.appendChild(option);
+    });
+  }
+
+  document.getElementById('riwayat-transaksi').addEventListener('change', (e) => {
+    const index = e.target.value;
+    if (index === "") {
+      document.getElementById('detail-transaksi').innerHTML = '';
+      return;
+    }
+
+    const transaksi = allTransactions[index];
+    let html = `<p><strong>Total:</strong> Rp ${formatRupiah(transaksi.total)}</p>`;
+    html += "<ul class='mt-1 list-disc list-inside'>";
+    transaksi.items.forEach(item => {
+      html += `<li>${item.product_name} x${item.qty} = Rp ${formatRupiah(item.total)}</li>`;
+    });
+    html += "</ul>";
+    document.getElementById('detail-transaksi').innerHTML = html;
+  });
+
+  // Panggil setelah halaman siap
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadProdukDropdown();
+    await loadTransaksi();
+  });
+    
+  </script>
+</body>
+</html>
