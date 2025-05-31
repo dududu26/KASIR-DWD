@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventory</title>
+  <link rel="stylesheet" href="inventory.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    th {
+      background: #eee;
+    }
+    button {
+      cursor: pointer;
+    }
+    #scanner-container, #scanner-container-cari {
+      border: 2px solid #ccc;
+      width: 100%;
+      max-width: 400px;
+      height: 300px;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<script>
+  // Minta kode akses sebelum menampilkan isi halaman
+  const kodeAkses = prompt('Masukkan kode akses untuk membuka halaman ini:');
+  if (kodeAkses !== '2612') {
+    alert('Kode akses salah! Anda tidak dapat membuka halaman ini.');
+    window.location.href = 'index.html'; // Redirect ke dashboard
+  }
+</script>
+
+<h1>Inventory</h1>
+<button onclick="window.location.href='kasir.html'">Ke Kasir</button>
+<button onclick="window.location.href='index.html'">Ke Dashboard</button>
+
+<h2>Tambah Produk</h2>
+<form id="form-tambah-produk">
+  <input type="text" id="barcode-produk" placeholder="Barcode (opsional)" />
+  <button type="button" onclick="mulaiScan()">Scan Barcode</button>
+  <div id="scanner-container"></div>
+
+  <input type="text" id="nama-produk" placeholder="Nama produk" required />
+  <input type="number" id="harga-produk" placeholder="Harga produk" min="1" required />
+  <input type="number" id="stok-produk" placeholder="Stok produk" min="0" required />
+  <!-- Hapus select varian rasa -->
+
+  <input type="text" id="kpde" placeholder="Kemasan/type/jenis (opsional)" />
+  <button type="submit">Tambah Produk</button>
+</form>
+
+<h2>Cari Produk</h2>
+<input type="text" id="cari-produk" placeholder="Cari nama atau barcode..." />
+<button type="button" onclick="mulaiScanCari()">Scan Barcode</button>
+<div id="scanner-container-cari"></div>
+
+<h2>Daftar Produk</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Nama Produk</th>
+      <th>Harga</th>
+      <th>Stok</th>
+      <th>KPDE</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody id="produk-list-inventory"></tbody>
+</table>
+
+<script>
+  // Inisialisasi Supabase
+  const supa = supabase.createClient(
+    'https://uupzrnmmsqnogbqivstj.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1cHpybm1tc3Fub2dicWl2c3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNjAyNzksImV4cCI6MjA2MzYzNjI3OX0.1bTJ9FGNZ8ou20gngHfhE_r7sI23AfYh0jtWyQFqSiI'
+  );
+
+  // Format harga ke Rupiah
+  function formatRupiah(number) {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
+  // Tambah produk
+  const formTambah = document.getElementById('form-tambah-produk');
+  formTambah.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('nama-produk').value.trim();
+    const price = parseInt(document.getElementById('harga-produk').value);
+    const stock = parseInt(document.getElementById('stok-produk').value);
+    const kpde = document.getElementById('kpde').value.trim();
+    const barcode = document.getElementById('barcode-produk').value.trim();
+
+    if (!name || price <= 0 || stock < 0) return alert('Input tidak valid');
+
+    // Insert tanpa flavor (varian rasa)
+    const { error } = await supa.from('products').insert([{ name, price, stock, kpde, barcode }]);
+    if (error) return alert('Gagal tambah produk: ' + error.message);
+
+    alecontent://com.android.externalstorage.documents/tree/primary%3Adwda.kasir::primary:dwda.kasir/inventory.htmlrt('Produk ditambahkan');
+    formTambah.reset();
+    loadProdukInventory();
+  });
+
+  // Load dan tampilkan produk di tabel
+  async function loadProdukInventory(filter = '') {
+    let query = supa.from('products').select('id, name, price, stock, kpde, barcode').order('name');
+    if (filter.trim() !== '') {
+      filter = filter.toLowerCase();
+      query = query.or(`name.ilike.%${filter}%,barcode.ilike.%${filter}%`);
+    }
+    const { data: products, error } = await query;
+
+    const tbody = document.getElementById('produk-list-inventory');
+    tbody.innerHTML = '';
+
+    if (error) {
+      console.error('Error memuat produk:', error.message);
+      tbody.innerHTML = `<tr><td colspan="5">Gagal memuat produk: ${error.message}</td></tr>`;
+      return;
+    }
+
+    if (!products.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada produk</td></tr>';
+      return;
+    }
+
+    products.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}<br/><small>Barcode: ${p.barcode || '-'}</small></td>
+        <td><span class="harga">${formatRupiah(p.price)}</span><input type="number" class="input-harga" value="${p.price}" style="display:none;" min="1" /></td>
+        <td><span class="stok">${p.stock}</span><input type="number" class="input-stok" value="${p.stock}" style="display:none;" min="0" /></td>
+        <td><span class="kpde">${p.kpde || '-'}</span><input type="text" class="input-kpde" value="${p.kpde || ''}" style="display:none;" /></td>
+        <td>
+          <button class="btn-edit">Edit</button>
+          <button class="btn-simpan" style="display:none;">Simpan</button>
+          <button class="btn-batal" style="display:none;">Batal</button>
+          <button class="btn-hapus" style="margin-left:5px; background-color:red; color:white;">Hapus</button>
+        </td>
+      `;
+
+      const editBtn = tr.querySelector('.btn-edit');
+      const simpanBtn = tr.querySelector('.btn-simpan');
+      const batalBtn = tr.querySelector('.btn-batal');
+      const hapusBtn = tr.querySelector('.btn-hapus');
+      const hargaSpan = tr.querySelector('.harga');
+      const stokSpan = tr.querySelector('.stok');
+      const kpdeSpan = tr.querySelector('.kpde');
+      const hargaInput = tr.querySelector('.input-harga');
+      const stokInput = tr.querySelector('.input-stok');
+      const kpdeInput = tr.querySelector('.input-kpde');
+
+      function toggleEditMode(on) {
+        hargaSpan.style.display = on ? 'none' : '';
+        stokSpan.style.display = on ? 'none' : '';
+        kpdeSpan.style.display = on ? 'none' : '';
+        hargaInput.style.display = on ? 'inline-block' : 'none';
+        stokInput.style.display = on ? 'inline-block' : 'none';
+        kpdeInput.style.display = on ? 'inline-block' : 'none';
+        editBtn.style.display = on ? 'none' : 'inline-block';
+        simpanBtn.style.display = on ? 'inline-block' : 'none';
+        batalBtn.style.display = on ? 'inline-block' : 'none';
+      }
+
+      editBtn.addEventListener('click', () => toggleEditMode(true));
+      batalBtn.addEventListener('click', () => {
+        hargaInput.value = p.price;
+        stokInput.value = p.stock;
+        kpdeInput.value = p.kpde || '';
+        toggleEditMode(false);
+      });
+
+      simpanBtn.addEventListener('click', async () => {
+        const newHarga = parseInt(hargaInput.value);
+        const newStok = parseInt(stokInput.value);
+        const newKpde = kpdeInput.value.trim();
+
+        if (newHarga < 1 || newStok < 0) return alert('Harga atau stok tidak valid');
+
+        const { error: updateError } = await supa
+          .from('products')
+          .update({ price: newHarga, stock: newStok, kpde: newKpde })
+          .eq('id', p.id);
+
+        if (updateError) return alert('Gagal update produk: ' + updateError.message);
+
+        p.price = newHarga;
+        p.stock = newStok;
+        p.kpde = newKpde;
+        hargaSpan.textContent = formatRupiah(newHarga);
+        stokSpan.textContent = newStok;
+        kpdeSpan.textContent = newKpde || '-';
+        toggleEditMode(false);
+      });
+
+      hapusBtn.addEventListener('click', async () => {
+        if (!confirm(`Hapus produk "${p.name}"?`)) return;
+        const { error: deleteError } = await supa.from('products').delete().eq('id', p.id);
+        if (deleteError) return alert('Gagal hapus produk: ' + deleteError.message);
+        loadProdukInventory();
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Load produk saat halaman dibuka
+  loadProdukInventory();
+
+  // Fitur pencarian produk dengan debounce sederhana
+  let searchTimeout = null;
+  const inputCari = document.getElementById('cari-produk');
+  inputCari.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      loadProdukInventory(inputCari.value);
+    }, 300);
+  });
+
+  // Scan Barcode untuk tambah produk
+  let html5QrcodeScanner = null;
+  function mulaiScan() {
+    const container = document.getElementById('scanner-container');
+    if (container.style.display === 'block') {
+      container.style.display = 'none';
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().catch(() => {});
+      }
+      return;
+    }
+    container.style.display = 'block';
+    html5QrcodeScanner = new Html5Qrcode("scanner-container");
+    html5QrcodeScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      (decodedText) => {
+        document.getElementById('barcode-produk').value = decodedText;
+        html5QrcodeScanner.stop();
+        container.style.display = 'none';
+      },
+      (errorMessage) => {
+        // ignore scan errors per frame
+      }
+    ).catch(err => alert('Gagal memulai scan: ' + err));
+  }
+
+  // Scan Barcode untuk pencarian produk
+  let html5QrcodeScannerCari = null;
+  function mulaiScanCari() {
+    const container = document.getElementById('scanner-container-cari');
+    if (container.style.display === 'block') {
+      container.style.display = 'none';
+      if (html5QrcodeScannerCari) {
+        html5QrcodeScannerCari.stop().catch(() => {});
+      }
+      return;
+    }
+    container.style.display = 'block';
+    html5QrcodeScannerCari = new Html5Qrcode("scanner-container-cari");
+    html5QrcodeScannerCari.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      (decodedText) => {
+        document.getElementById('cari-produk').value = decodedText;
+        loadProdukInventory(decodedText); // langsung filter pencarian
+        html5QrcodeScannerCari.stop();
+        container.style.display = 'none';
+      },
+      (errorMessage) => {
+        // ignore scan errors per frame
+      }
+    ).catch(err => alert('Gagal memulai scan: ' + err));
+  }
+</script>
+</body>
+</html>

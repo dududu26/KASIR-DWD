@@ -1,0 +1,142 @@
+body {
+  background-color: #f3f4f6;
+  font-family: sans-serif;
+  color: #1f2937;
+  padding: 20px;
+  margin: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+th, td {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  text-align: left;
+  font-size: 14px;
+}
+
+thead {
+  background-color: #e5e7eb;
+  font-weight: bold;
+}
+
+#untung-rugi-container {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 20px;
+  display: none;
+}
+
+#status-selisih {
+  margin-top: 8px;
+  font-size: 16px;
+}
+
+/* ANIMASI KEDAP-KEDIP UNTUK PERBANDINGAN */
+.blink {
+  animation: blink 1s infinite;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  table, th, td {
+    border: 1px solid black !important;
+    color: black !important;
+    background: white !important;
+  }
+
+  button, input, label, .btn-primary, .btn-secondary {
+    display: none !important;
+  }
+
+  #untung-rugi-container {
+    display: block !important;
+    margin-top: 20px;
+  }
+}

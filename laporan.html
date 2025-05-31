@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Laporan Harian Kasir</title>
+   <link rel="stylesheet" href="laporan.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      table, th, td {
+        border: 1px solid black !important;
+        color: black !important;
+        background: white !important;
+      }
+      button, input, label {
+        display: none !important;
+      }
+      #untung-rugi-container {
+        display: block !important;
+        margin-top: 20px;
+      }
+    }
+  </style>
+</head>
+<body class="p-6 bg-gray-100 text-gray-800 font-sans">
+
+  <div class="max-w-4xl mx-auto bg-white shadow rounded p-6">
+    <h1 class="text-2xl font-bold mb-4">📋 Laporan Harian Kasir</h1>
+
+    <div class="mb-4 flex gap-2 flex-wrap">
+      <button onclick="window.location.href='index.html'" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+        ⬅️ Kembali ke Dashboard
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <label>
+        Pilih Tanggal:
+        <input type="date" id="tanggal-laporan" class="border w-full px-2 py-1 rounded" />
+      </label>
+      <label>
+        Nama Kasir:
+        <input type="text" id="nama-kasir" class="border w-full px-2 py-1 rounded" />
+      </label>
+      <label>
+        Uang Cash (Rp):
+        <input type="number" id="uang-cash" class="border w-full px-2 py-1 rounded" placeholder="Masukkan uang cash" />
+      </label>
+      <div class="flex gap-2 items-end">
+        <button id="btn-muat" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+          🔍 Muat Laporan
+        </button>
+        <button id="btn-cetak" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded" disabled>
+          🖨️ Cetak
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">📊 Ringkasan Laporan</h2>
+      <p>Total Penjualan: <span id="total-penjualan">Rp 0</span></p>
+      <p>Jumlah Transaksi: <span id="jumlah-transaksi">0</span></p>
+      <p>Nama Kasir: <span id="laporan-kasir"></span></p>
+    </div>
+
+    <div id="untung-rugi-container" class="mt-4 p-4 border rounded bg-gray-50" style="display:none;">
+      <h2 class="text-lg font-semibold mb-2">💰 Perbandingan Untung/Rugi</h2>
+      <p>Uang Cash: <span id="uang-cash-display">Rp 0</span></p>
+   <p>Selisih (Uang Cash - Total Penjualan): 
+  <span id="selisih-rupiah" class="blink">Rp 0</span>
+</p>
+      <p id="status-selisih" class="font-bold"></p>
+    </div>
+
+    <div class="mt-6">
+      <h2 class="text-lg font-semibold mb-2">📦 Detail Transaksi</h2>
+      <table class="w-full border-collapse border text-sm">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="border px-2 py-1">Waktu</th>
+            <th class="border px-2 py-1">Produk</th>
+            <th class="border px-2 py-1">Qty</th>
+            <th class="border px-2 py-1">Total</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-transaksi" class="bg-white"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const supa = supabase.createClient(
+      'https://uupzrnmmsqnogbqivstj.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1cHpybm1tc3Fub2dicWl2c3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNjAyNzksImV4cCI6MjA2MzYzNjI3OX0.1bTJ9FGNZ8ou20gngHfhE_r7sI23AfYh0jtWyQFqSiI'
+    );
+
+    const btnMuat = document.getElementById('btn-muat');
+    const btnCetak = document.getElementById('btn-cetak');
+
+    btnMuat.addEventListener('click', muatLaporan);
+    btnCetak.addEventListener('click', () => window.print());
+
+    function formatRupiah(number) {
+      return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    function setUntungRugi(uangCash, totalPenjualan) {
+      const selisih = uangCash - totalPenjualan;
+      const isUntung = selisih > 0;
+      const isRugi = selisih < 0;
+
+      const prefix = isRugi ? "–" : (isUntung ? "+" : "");
+      const statusEl = document.getElementById('status-selisih');
+      const selisihEl = document.getElementById('selisih-rupiah');
+
+      document.getElementById('uang-cash-display').textContent = `Rp ${formatRupiah(uangCash)}`;
+      selisihEl.textContent = `${prefix} Rp ${formatRupiah(Math.abs(selisih))}`;
+
+      if (isUntung) {
+        statusEl.textContent = "Untung";
+        statusEl.style.color = "green";
+      } else if (isRugi) {
+        statusEl.textContent = "Rugi";
+        statusEl.style.color = "red";
+      } else {
+        statusEl.textContent = "Seimbang";
+        statusEl.style.color = "black";
+      }
+
+      document.getElementById('untung-rugi-container').style.display = 'block';
+    }
+
+    async function muatLaporan() {
+      const tanggal = document.getElementById('tanggal-laporan').value;
+      const namaKasir = document.getElementById('nama-kasir').value;
+      const uangCashInput = document.getElementById('uang-cash').value;
+
+      if (!tanggal || !namaKasir) {
+        alert('Tanggal dan nama kasir wajib diisi.');
+        return;
+      }
+      if (!uangCashInput || isNaN(uangCashInput) || Number(uangCashInput) < 0) {
+        alert('Uang cash harus diisi dengan angka valid.');
+        return;
+      }
+
+      const uangCash = Number(uangCashInput);
+      document.getElementById('laporan-kasir').textContent = namaKasir;
+      btnCetak.disabled = true;
+
+      const { data: transaksi, error } = await supa
+        .from('transactions')
+        .select('*')
+        .gte('created_at', `${tanggal}T00:00:00`)
+        .lte('created_at', `${tanggal}T23:59:59`);
+
+      if (error) {
+        alert('Gagal memuat data transaksi: ' + error.message);
+        return;
+      }
+
+      let total = 0;
+      const tbody = document.getElementById('tabel-transaksi');
+      tbody.innerHTML = '';
+
+      if (!transaksi || transaksi.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center p-2">Tidak ada transaksi pada tanggal ini.</td></tr>`;
+      } else {
+        transaksi.forEach(tx => {
+          total += tx.total;
+          tx.items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="border px-2 py-1">${new Date(tx.created_at).toLocaleTimeString()}</td>
+              <td class="border px-2 py-1">${item.product_name}</td>
+              <td class="border px-2 py-1">${item.qty}</td>
+              <td class="border px-2 py-1">Rp ${formatRupiah(item.total)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+      }
+
+      document.getElementById('total-penjualan').textContent = `Rp ${formatRupiah(total)}`;
+      document.getElementById('jumlah-transaksi').textContent = transaksi ? transaksi.length : 0;
+
+      // Tampilkan hasil perbandingan
+      setUntungRugi(uangCash, total);
+      btnCetak.disabled = false;
+    }
+  </script>
+
+</body>
+</html>

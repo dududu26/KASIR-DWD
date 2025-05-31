@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard dengan Kode Akses</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background-color: #f5f5f5;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    #dashboard {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    #login-form {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    input[type="password"] {
+      padding: 12px;
+      font-size: 1.1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #error-msg {
+      color: red;
+      margin-bottom: 12px;
+      display: none;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      font-size: 2rem;
+      text-align: center;
+    }
+
+    #dashboard button {
+      margin: 10px 0;
+      width: 100%;
+      max-width: none;
+    }
+
+    @media (min-width: 600px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      #dashboard button {
+        font-size: 1.4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="login-form">
+    <h1>Masukkan Kode Akses</h1>
+    <input type="password" id="password-input" placeholder="Kode akses" autofocus />
+    <div id="error-msg">Kode akses salah!</div>
+    <button id="btn-login">Masuk</button>
+  </div>
+
+  <div id="dashboard">
+    <h1>Dashboard KEDAI DWD</h1>
+    <button id="btn-kasir">Buka Kasir</button>
+    <button id="btn-inventory">Buka Inventaris</button>
+    <button id="btn-laporan">Buka Laporan</button>
+  </div>
+  
+  <script>
+    const PASSWORD = '261296'  // ganti dengan kode akses yang diinginkan
+    const loginForm = document.getElementById('login-form')
+    const dashboard = document.getElementById('dashboard')
+    const errorMsg = document.getElementById('error-msg')
+    const passwordInput = document.getElementById('password-input')
+    const btnLogin = document.getElementById('btn-login')
+
+    btnLogin.addEventListener('click', () => {
+      const entered = passwordInput.value.trim()
+      if (entered === PASSWORD) {
+        errorMsg.style.display = 'none'
+        loginForm.style.display = 'none'
+        dashboard.style.display = 'flex'
+      } else {
+        errorMsg.style.display = 'block'
+      }
+    })
+
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        btnLogin.click()
+      }
+    })
+
+    // Tombol dashboard
+    document.getElementById('btn-kasir').addEventListener('click', () => {
+      window.location.href = 'kasir.html';
+    });
+
+    document.getElementById('btn-inventory').addEventListener('click', () => {
+      window.location.href = 'inventory.html';
+    });
+
+    document.getElementById('btn-laporan').addEventListener('click', () => {
+      window.location.href = 'laporan.html';
+    });
+  </script>
+</body>
+</html>
